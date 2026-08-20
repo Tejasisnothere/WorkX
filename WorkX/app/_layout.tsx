@@ -33,6 +33,20 @@ export default function RootLayout() {
           title: "Modal",
         }}
       />
+
+      <Stack.Screen
+        name="onboarding"
+        options={{
+          headerShown: false,
+        }}
+      />
+
+      <Stack.Screen
+        name="language"
+        options={{
+          headerShown: false,
+        }}
+      />  
     </Stack>
   );
 }
