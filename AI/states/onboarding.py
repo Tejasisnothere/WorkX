@@ -1,36 +1,24 @@
-from typing import List, Annotated
-from pydantic import BaseModel
+from typing import Annotated, Optional
+from pydantic import BaseModel, Field
 from langgraph.graph.message import add_messages
 from langchain_core.messages import BaseMessage
-from pydantic import Field
 
 
-class UserDetails(BaseModel):
+class UserInfo(BaseModel):
     name: str
-    lat: float
-    long: float
-    age: int
-    language: str
     profession: str
-
-
-class OnboardingState(BaseModel):
-    messages: Annotated[list[BaseMessage], add_messages] = Field(default_factory=list)
-    profile: UserDetails
-    language: str
+    age: int
 
 
 class InterviewState(BaseModel):
-    passes: int
-    total_score: int
-    inst_score: int
-    question: str
-    answer: str
-    messages: Annotated[list[BaseMessage], add_messages] = Field(default_factory=list)
-    summary: str
+    user: UserInfo
+    messages: Annotated[list[BaseMessage], add_messages] = []
+    question: str = ""
+    answer: str = ""
+    inst_score: float = 0
+    total_score: float = 0
+    passes: int = 0
+    skills: list[str] = []
+    tools: list[str] = []
 
-
-
-
-
-
+    summary: str=""

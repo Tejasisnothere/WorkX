@@ -23,3 +23,5 @@ uvicorn
 python-multipart
 langgraph
 google-cloud-translate
+langgraph-checkpoint-postgres
+psycopg[binary,pool]
