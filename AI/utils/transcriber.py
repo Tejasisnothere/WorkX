@@ -37,13 +37,5 @@ class Transcriber:
             CustomException(e, sys)
 
 
-t = Transcriber()
-text = t.transcribe()
-
-from utils.translator import Translator
-
-trans = Translator()
-trans.translate(text)
-
 
 
