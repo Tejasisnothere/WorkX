@@ -1,31 +1,31 @@
-import { View } from "react-native";
+import { View, Text } from "react-native";
 import { useState } from "react";
-import Input from "@/components/Input";
+import BottomSheet from "@/components/BottomSheet";
 import Button from "@/components/Button";
 
 export default function HomeScreen() {
-  const [phone, setPhone] = useState("");
-  const [name, setName] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
 
   return (
-    <View style={{backgroundColor: "#fff", flex: 1, padding: 20}}>
-      <Button title="Find Jobs" onPress={() => console.log("pressed")} />
+    <View style={{ backgroundColor: "#fff", flex: 1, padding: 20 }}>
+      <Button title="Filters" onPress={() => setShowFilters(true)} />
 
-      <Button
-        title="Cancel"
-        variant="secondary"
-        onPress={() => console.log("cancel")}
-      />
+      <BottomSheet
+        visible={showFilters}
+        title="Filter Jobs"
+        onClose={() => setShowFilters(false)}
+      >
+        <Text>Location</Text>
 
-      <Button
-        title="Delete"
-        variant="danger"
-        onPress={() => console.log("delete")}
-      />
+        <Text>Skills</Text>
 
-      <Button title="Applying..." state="loading" onPress={() => {}} />
-
-      <Button title="Disabled" state="disabled" onPress={() => {}} />
+        <Button
+          title="Apply Filters"
+          onPress={() => {
+            setShowFilters(false);
+          }}
+        />
+      </BottomSheet>
     </View>
   );
 }
