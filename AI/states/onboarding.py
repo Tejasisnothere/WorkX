@@ -8,7 +8,9 @@ class UserInfo(BaseModel):
     name: str
     profession: str
     age: int
-
+    lat: float
+    long: float
+    language: str
 
 class InterviewState(BaseModel):
     user: UserInfo

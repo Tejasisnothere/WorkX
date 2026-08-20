@@ -1,18 +1,23 @@
+import os
+from contextlib import asynccontextmanager
+
 from pydantic import BaseModel, Field
 from langchain_core.output_parsers import StrOutputParser
 from langgraph.graph import StateGraph, START, END
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.prompts import PromptTemplate
 from states.onboarding import InterviewState
-from langgraph.checkpoint.memory import MemorySaver
+from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.types import interrupt, Command
 from langchain_groq import ChatGroq
-import os
 from dotenv import load_dotenv
+
 load_dotenv()
 
 key = os.getenv("GROQ_API_KEY")
 llm = ChatGroq(model="openai/gpt-oss-120b", api_key=key)
+
+DB_URI = os.getenv("DATABASE_URL")
 
 
 class Evaluator(BaseModel):
@@ -134,12 +139,33 @@ CONVERSATION
     }
 
 
+async def create_user_summary(state: InterviewState):
+    class UserSummary(BaseModel):
+        summary: str = Field(description="breif about user's work experience and profession.")
+
+    prompt = PromptTemplate.from_template("""
+You are an expert user work profile analyser. Your job is to provide a summary about what a user knows, about their work experience
+and a brief about their work. You would be provided with a chat between an AI and user and a score out of 10 given by the AI.
+Chat history:
+{messages}
+""")
+
+    structured_llm = llm.with_structured_output(UserSummary)
+    chain = prompt | structured_llm
+    summary = await chain.ainvoke({"messages": state.messages})
+
+    return {
+        "summary": summary.summary
+    }
+
+
 builder = StateGraph(InterviewState)
 
 builder.add_node("ask_question", ask_question)
 builder.add_node("get_answer", get_answer)
 builder.add_node("evaluate_answer", evaluate_answer)
 builder.add_node("gather_tech_knowledge", gather_tech_knowledge)
+builder.add_node("summary", create_user_summary)
 
 builder.add_edge(START, "ask_question")
 builder.add_edge("ask_question", "get_answer")
@@ -153,7 +179,13 @@ builder.add_conditional_edges(
         "end": "gather_tech_knowledge"
     }
 )
-builder.add_edge("gather_tech_knowledge", END)
+builder.add_edge("gather_tech_knowledge", "summary")
+builder.add_edge("summary", END)
 
-checkpointer = MemorySaver()
-graph = builder.compile(checkpointer=checkpointer)
+
+
+@asynccontextmanager
+async def get_graph():
+    async with AsyncPostgresSaver.from_conn_string(DB_URI) as checkpointer:
+        await checkpointer.setup()  # creates checkpoint tables if missing; safe to call every startup
+        yield builder.compile(checkpointer=checkpointer)

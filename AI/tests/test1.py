@@ -6,7 +6,9 @@ BASE_URL = "http://localhost:8000"
 resp = requests.post(f"{BASE_URL}/interview/start", json={
     "name": "Ramesh",
     "profession": "Electrician",
-    "age": 34
+    "age": 34,
+    "lat":10,
+    "long":13
 })
 data = resp.json()
 print("START:", data)
@@ -29,5 +31,6 @@ for answer in canned_answers:
     })
     data = resp.json()
     print("ANSWER ->", data)
+    print(answer)
 
 print("\nFINAL RESULT:", data)
