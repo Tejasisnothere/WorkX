@@ -21,7 +21,7 @@ DB_URI = os.getenv("DATABASE_URL")
 
 
 class Evaluator(BaseModel):
-    score: float = Field(description="Float score from 1-10 based on how good the user's response to the question is.")
+    score: int = Field(description="Float score from 1-10 based on how good the user's response to the question is. Limit 1 to 10")
 
 
 class TechnicalSkills(BaseModel):
@@ -31,7 +31,8 @@ class TechnicalSkills(BaseModel):
 
 async def ask_question(state: InterviewState):
 
-    prompt = PromptTemplate.from_template("""You are an onboarding interviewer for a local employment-matching platform. Ask ONE natural, conversational question that uncovers the worker's real experience — what they've done, how they did it, and what they're capable of.
+    prompt = PromptTemplate.from_template("""
+You are an onboarding interviewer for a local employment-matching platform. Your job is to ask ONE natural, conversational question that uncovers the worker's real work experience — what they've done, how they did it, and what they're capable of — so they can be matched to suitable jobs.
 
 WORKER
 Name: {name}
@@ -42,14 +43,11 @@ CONVERSATION SO FAR
 {messages}
 
 HOW TO CHOOSE THE NEXT QUESTION
-1. Look at what's already been asked and answered — don't repeat the same angle twice.
-2. Rotate across these angles as the conversation progresses, picking whichever fits best given what's already been said:
-   - Their best or proudest piece of work — what it was and how they pulled it off
-   - The specific tools, equipment, or materials they use regularly
-   - A problem or tricky situation they solved on the job, and how
-   - Their day-to-day tasks in their most recent work
-3. If the worker just mentioned something specific (a task, tool, job, problem), you can dig one level deeper into that instead of switching angles — but don't do this on every turn, or it gets repetitive.
+1. Read the conversation and find the most recent specific thing the worker mentioned (a task, tool, job, or skill).
+2. Ask a follow-up that digs deeper into that specific thing — not a generic question.
+3. If nothing specific has come up yet, ask about their most recent job: what they actually did day to day.
 4. Never re-ask something already answered or already known (name, age, profession, location, etc.).
+5. Prioritize whatever best reveals: tasks they can do independently, tools/equipment they've used, methods or techniques, problems they've solved, and hands-on strengths.
 
 STYLE
 - Simple, everyday language — no corporate or technical jargon.
@@ -92,23 +90,11 @@ async def evaluate_answer(state: InterviewState):
     answer = state.answer
     question = state.question
     evaluator_prompt = PromptTemplate.from_template("""
-You are an onboarding evaluator agent for a job-matching platform. Your task is to assess how well the user's answer addresses the interview question, based on two criteria:
-
-1. **Relevance** — does the answer actually address what was asked, or does it drift off-topic?
-2. **Accuracy** — is the answer factually sound and internally consistent (no contradictions, no fabricated claims)?
-
+You are an onboarding evaluator agent. Your task is to score the user's answer based on relevance and accuracy.
 Question: {question}
-
+\n
 Answer: {answer}
-
-Score the answer on a scale of 0–10, where:
-- 0–2: Off-topic, empty, or nonsensical
-- 3–5: Partially relevant but shallow, vague, or missing key substance
-- 6–8: Relevant and accurate, reasonably detailed
-- 9–10: Highly relevant, precise, and demonstrates clear domain competence
-
-Respond with ONLY a JSON object in this exact format, no other text:
-{{"score": <int 0-10>, "reasoning": "<one sentence justification>"}}
+Rate the answer out of 1 to 10.
 """)
 
     structured_llm = llm.with_structured_output(Evaluator)
@@ -128,7 +114,7 @@ Respond with ONLY a JSON object in this exact format, no other text:
 
 
 def check_passes(state: InterviewState):
-    if state.passes >= 7:
+    if state.passes >= 3:
         return "end"
     return "continue"
 

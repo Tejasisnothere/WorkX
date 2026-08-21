@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 from collections import defaultdict
 import asyncio
 import uuid
+import os
 from langchain_huggingface import HuggingFaceEmbeddings
 from fastapi import FastAPI, HTTPException, BackgroundTasks, UploadFile, File, Form
 from pydantic import BaseModel
@@ -14,15 +15,33 @@ from pipelines.WorkerStorage import StoragePipeline
 import langcodes
 from utils.transcriber import Transcriber
 
-# Fixed: HuggingFaceEmbeddings takes `model_name`, not `model` — using the
-# wrong kwarg raises a validation error at import time and the whole app
-# fails to start.
-embedder = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
 
-import os  # add to top-level imports
+embedder = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
 
 AUDIO_STORAGE_PATH = os.path.join(os.getcwd(), "audios")
 os.makedirs(AUDIO_STORAGE_PATH, exist_ok=True)
+
+
+def resolve_lang_code(language: str) -> str:
+    """Normalizes any language name/code (e.g. 'hindi', 'Hindi', 'hi') to
+    a short ISO code Google Translate accepts. Raises a clean 400 if the
+    input isn't recognizable at all."""
+    try:
+        return langcodes.find(language).language
+    except LookupError:
+        raise HTTPException(status_code=400, detail=f"Unrecognized language: {language}")
+
+
+def translate_if_needed(text: str, target_lang: str, source_lang: str = "en") -> str:
+    """Skips the Translate API call entirely when source and target are
+    the same language — Google's API rejects same-language pairs (e.g.
+    en->en) as a 400 Bad Request, so this avoids that error and saves a
+    network call for English-speaking users."""
+    if not text:
+        return text
+    if target_lang == source_lang:
+        return text
+    return Translator(from_lang=source_lang, to_lang=target_lang).translate(text)
 
 
 @asynccontextmanager
@@ -35,20 +54,12 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-# Per-thread locks: prevents two concurrent requests (e.g. a retried
-# double-tap from the frontend) from invoking the same session at once.
-# Different users get different locks, so this never blocks each other.
 thread_locks: dict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
 
 sp = StoragePipeline()
 
 
 class StartRequest(BaseModel):
-    # Added: `phone` and `language` were referenced below (as req.id /
-    # req.language) but never declared here — FastAPI/Pydantic has no
-    # attribute for undeclared fields, so this crWAashed at runtime.
-    # Renamed `id` -> `phone` since it's what's actually passed into
-    # phone_to_id(); using `id` was misleading.
     name: str
     profession: str
     age: int
@@ -58,11 +69,6 @@ class StartRequest(BaseModel):
     language: str
 
 
-class AnswerRequest(BaseModel):
-    thread_id: str
-    answer: str
-
-
 def extract_interrupt_question(result: dict):
     """Pulls the question out of an interrupt payload, if execution paused."""
     if "__interrupt__" in result:
@@ -70,20 +76,14 @@ def extract_interrupt_question(result: dict):
     return None
 
 
-
 @app.post("/interview/start")
 async def start_interview(req: StartRequest):
     graph = app.state.graph
 
-    # thread_id is deterministic from phone number, so the same worker
-    # always maps to the same LangGraph thread AND the same Qdrant point
-    # id later (worker_id=req.thread_id in submit_answer). If the same
-    # phone number calls /start again, this re-runs the graph from START
-    # on that same thread_id, overwriting its prior progress — decide if
-    # that's the behavior you want, or add a check-existing-session guard
-    # here first.
     thread_id = phone_to_id(req.phone)
     config = {"configurable": {"thread_id": thread_id}}
+
+    user_language = resolve_lang_code(req.language)
 
     initial_state = InterviewState(
         user=UserInfo(
@@ -92,7 +92,7 @@ async def start_interview(req: StartRequest):
             age=req.age,
             lat=req.lat,
             long=req.long,
-            language=langcodes.find(req.language).language,
+            language=user_language,  # store the normalized code, not raw input
         ),
     )
 
@@ -100,8 +100,7 @@ async def start_interview(req: StartRequest):
 
     question = extract_interrupt_question(result)
     if question:
-        translator = Translator(from_lang="en", to_lang=initial_state.user.language)
-        translated_question = translator.translate(question)
+        translated_question = translate_if_needed(question, user_language)
         return {"thread_id": thread_id, "status": "in_progress", "question": translated_question}
 
     return {
@@ -148,14 +147,17 @@ async def submit_answer(
     if not answer_text:
         raise HTTPException(status_code=422, detail="Could not transcribe audio")
 
+    # remove here
+
+    os.remove(file_path)
+
     lock = thread_locks[thread_id]
     async with lock:
         result = await graph.ainvoke(Command(resume=answer_text), config=config)
 
     question = extract_interrupt_question(result)
     if question:
-        translator = Translator(from_lang="en", to_lang=user_language)
-        translated_question = translator.translate(question)
+        translated_question = translate_if_needed(question, user_language)
         return {"status": "in_progress", "question": translated_question}
 
     raw_user = result.get("user", {})

@@ -9,7 +9,7 @@ class SearchQuery(BaseModel):
     search_text: str = ""          
     profession: str = ""           
     keywords: list[str] = []       
-    radius_km: float = 10.0        
+    radius_km: float = 20.0    
 
 
 class WorkerResult(BaseModel):
