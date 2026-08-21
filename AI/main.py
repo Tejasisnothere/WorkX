@@ -3,20 +3,33 @@ from collections import defaultdict
 import asyncio
 import uuid
 from langchain_huggingface import HuggingFaceEmbeddings
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException, BackgroundTasks, UploadFile, File, Form
 from pydantic import BaseModel
 from langgraph.types import Command
-
+from utils.hasher import phone_to_id
 from graphs.Interview import get_graph
 from states.onboarding import InterviewState, UserInfo
-
+from utils.translator import Translator
 from pipelines.WorkerStorage import StoragePipeline
+import langcodes
+from utils.transcriber import Transcriber
+
+# Fixed: HuggingFaceEmbeddings takes `model_name`, not `model` — using the
+# wrong kwarg raises a validation error at import time and the whole app
+# fails to start.
+embedder = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+
+import os  # add to top-level imports
+
+AUDIO_STORAGE_PATH = os.path.join(os.getcwd(), "audios")
+os.makedirs(AUDIO_STORAGE_PATH, exist_ok=True)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     async with get_graph() as graph:
         app.state.graph = graph
-        app.state.embedder = HuggingFaceEmbeddings(model="all-MiniLM-L6-v2")
+        app.state.embedder = embedder
         yield
 
 
@@ -31,11 +44,18 @@ sp = StoragePipeline()
 
 
 class StartRequest(BaseModel):
+    # Added: `phone` and `language` were referenced below (as req.id /
+    # req.language) but never declared here — FastAPI/Pydantic has no
+    # attribute for undeclared fields, so this crWAashed at runtime.
+    # Renamed `id` -> `phone` since it's what's actually passed into
+    # phone_to_id(); using `id` was misleading.
     name: str
     profession: str
     age: int
     lat: float
     long: float
+    phone: str
+    language: str
 
 
 class AnswerRequest(BaseModel):
@@ -50,14 +70,19 @@ def extract_interrupt_question(result: dict):
     return None
 
 
+
 @app.post("/interview/start")
 async def start_interview(req: StartRequest):
     graph = app.state.graph
 
-    # This thread_id is the key everything else hangs off of: pass it in
-    # config on every future call for this session, and AsyncPostgresSaver
-    # will load/save that exact conversation's state in Postgres under it.
-    thread_id = req.id
+    # thread_id is deterministic from phone number, so the same worker
+    # always maps to the same LangGraph thread AND the same Qdrant point
+    # id later (worker_id=req.thread_id in submit_answer). If the same
+    # phone number calls /start again, this re-runs the graph from START
+    # on that same thread_id, overwriting its prior progress — decide if
+    # that's the behavior you want, or add a check-existing-session guard
+    # here first.
+    thread_id = phone_to_id(req.phone)
     config = {"configurable": {"thread_id": thread_id}}
 
     initial_state = InterviewState(
@@ -67,7 +92,7 @@ async def start_interview(req: StartRequest):
             age=req.age,
             lat=req.lat,
             long=req.long,
-            language=req.language
+            language=langcodes.find(req.language).language,
         ),
     )
 
@@ -75,7 +100,9 @@ async def start_interview(req: StartRequest):
 
     question = extract_interrupt_question(result)
     if question:
-        return {"thread_id": thread_id, "status": "in_progress", "question": question}
+        translator = Translator(from_lang="en", to_lang=initial_state.user.language)
+        translated_question = translator.translate(question)
+        return {"thread_id": thread_id, "status": "in_progress", "question": translated_question}
 
     return {
         "thread_id": thread_id,
@@ -88,34 +115,55 @@ async def start_interview(req: StartRequest):
 
 
 @app.post("/interview/answer")
-async def submit_answer(req: AnswerRequest, background_tasks: BackgroundTasks):
+async def submit_answer(
+    background_tasks: BackgroundTasks,
+    phone: str = Form(...),
+    audio: UploadFile = File(...),
+):
+    thread_id = phone_to_id(phone)
     graph = app.state.graph
-    config = {"configurable": {"thread_id": req.thread_id}}
+    config = {"configurable": {"thread_id": thread_id}}
 
     # Reject unknown/expired sessions early with a clean error.
-    # Since state now lives in Postgres, this also works after a server
-    # restart — the thread_id from /interview/start remains valid.
     state = await graph.aget_state(config)
     if not state.values:
         raise HTTPException(status_code=404, detail="Session not found or expired")
 
-    lock = thread_locks[req.thread_id]
+    raw_user = state.values.get("user", {})
+    user_snapshot = raw_user.model_dump() if hasattr(raw_user, "model_dump") else raw_user
+    user_language = user_snapshot.get("language", "en")
+
+    # Save uploaded audio to disk under a unique name
+    ext = os.path.splitext(audio.filename)[1] or ".m4a"
+    unique_filename = f"{uuid.uuid4()}{ext}"
+    file_path = os.path.join(AUDIO_STORAGE_PATH, unique_filename)
+
+    with open(file_path, "wb") as f:
+        f.write(await audio.read())
+
+    # Transcribe (blocking call to Groq — push off the event loop)
+    transcriber = Transcriber(filename=unique_filename)
+    answer_text = await asyncio.to_thread(transcriber.transcribe)
+
+    if not answer_text:
+        raise HTTPException(status_code=422, detail="Could not transcribe audio")
+
+    lock = thread_locks[thread_id]
     async with lock:
-        result = await graph.ainvoke(Command(resume=req.answer), config=config)
+        result = await graph.ainvoke(Command(resume=answer_text), config=config)
 
     question = extract_interrupt_question(result)
     if question:
-        return {"status": "in_progress", "question": question}
+        translator = Translator(from_lang="en", to_lang=user_language)
+        translated_question = translator.translate(question)
+        return {"status": "in_progress", "question": translated_question}
 
-    # `user` may come back as either a nested dict or an actual UserInfo
-    # Pydantic instance depending on LangGraph's serialization — normalize
-    # to a dict either way so .get(...) always works.
     raw_user = result.get("user", {})
     user = raw_user.model_dump() if hasattr(raw_user, "model_dump") else raw_user
 
     background_tasks.add_task(
         sp.initiateVSPipeline,
-        worker_id=req.thread_id,    # replace with user id
+        worker_id=thread_id,
         summary=result.get("summary", ""),
         skills=result.get("skills", []),
         tools=result.get("tools", []),
@@ -124,8 +172,10 @@ async def submit_answer(req: AnswerRequest, background_tasks: BackgroundTasks):
         long=user.get("long", ""),
         name=user.get("name", ""),
         score=result.get("total_score", 5),
-        embedder=app.state.embedder
+        embedder=app.state.embedder,
     )
+
+    background_tasks.add_task(os.remove, file_path)
 
     return {
         "status": "done",
@@ -156,9 +206,6 @@ async def get_status(thread_id: str):
         "tools": state.values.get("tools", []),
         "summary": state.values.get("summary", ""),
     }
-
-
-
 
 
 if __name__ == "__main__":

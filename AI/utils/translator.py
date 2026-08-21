@@ -20,29 +20,24 @@ class Translator:
 
     
     def translate(self, text):
-        params = {
-            "key":self.key
-        }
-
+        params = {"key": self.key}
         data = {
-            "q":text,
-            "target":"en",
-            "format":"text"
+            "q": text,
+            "source": self.from_lang,
+            "target": self.to_lang,
+            "format": "text"
         }
 
-        try:
+        response = requests.post(self.url, params=params, json=data)
+        result = response.json()
 
-            logging.info("Translation request initiated")
-            response = requests.post(self.url, params=params, json=data)
+        print("TRANSLATE API RAW RESPONSE:", result)  
 
-            print(response.json()['data']['translations'][0]['translatedText'])
+        if "error" in result:
+            raise RuntimeError(f"Translation API error: {result['error']}")
 
-            return response.json()['data']['translations'][0]['translatedText']
+        return result["data"]["translations"][0]["translatedText"]
 
-
-        except Exception as e:
-            logging.info("ERROR")
-            raise CustomException(e, sys)
 
 
     

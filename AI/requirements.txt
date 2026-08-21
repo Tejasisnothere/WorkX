@@ -25,3 +25,4 @@ langgraph
 google-cloud-translate
 langgraph-checkpoint-postgres
 psycopg[binary,pool]
+langcodes
