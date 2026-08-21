@@ -1,0 +1,318 @@
+{
+  "info": {
+    "name": "WorkX - Stage 5: Saved Jobs",
+    "description": "End-to-end flow for POST/DELETE /jobs/:jobId/save and GET /saved-jobs. Uses collection variables so requests can be run top-to-bottom.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5000/api/v1" },
+    { "key": "employerToken", "value": "" },
+    { "key": "seekerToken", "value": "" },
+    { "key": "otherSeekerToken", "value": "" },
+    { "key": "jobId", "value": "" },
+    { "key": "fakeJobId", "value": "000000000000000000000000" }
+  ],
+  "item": [
+    {
+      "name": "0. Setup",
+      "item": [
+        {
+          "name": "Register Employer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('employerToken', body.data.token);",
+                  "pm.test('status 201', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Employer One\",\n  \"phoneNumber\": \"+15550000001\",\n  \"password\": \"password123\",\n  \"role\": \"EMPLOYER\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Register Seeker",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('seekerToken', body.data.token);",
+                  "pm.test('status 201', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Seeker One\",\n  \"phoneNumber\": \"+15550000002\",\n  \"password\": \"password123\",\n  \"role\": \"SEEKER\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Register Other Seeker",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('otherSeekerToken', body.data.token);",
+                  "pm.test('status 201', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Seeker Two\",\n  \"phoneNumber\": \"+15550000003\",\n  \"password\": \"password123\",\n  \"role\": \"SEEKER\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Employer Creates Job",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('jobId', body.data.job._id);",
+                  "pm.test('status 201', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{employerToken}}" }
+            ],
+            "url": "{{baseUrl}}/jobs",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Backend Engineer\",\n  \"description\": \"Build cool stuff\",\n  \"companyName\": \"Acme Inc\",\n  \"location\": \"Remote\",\n  \"jobType\": \"Full-time\",\n  \"skills\": [\"node\", \"typescript\"]\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "1. Seeker saves a job",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status 201', () => pm.response.to.have.status(201));",
+              "pm.test('savedJob has correct seeker and job', () => {",
+              "  const body = pm.response.json();",
+              "  pm.expect(body.data.savedJob.jobId).to.eql(pm.collectionVariables.get('jobId'));",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Authorization", "value": "Bearer {{seekerToken}}" }],
+        "url": "{{baseUrl}}/jobs/{{jobId}}/save"
+      }
+    },
+    {
+      "name": "2. Duplicate save is rejected (409)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status 409', () => pm.response.to.have.status(409));",
+              "pm.test('success false', () => pm.expect(pm.response.json().success).to.eql(false));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Authorization", "value": "Bearer {{seekerToken}}" }],
+        "url": "{{baseUrl}}/jobs/{{jobId}}/save"
+      }
+    },
+    {
+      "name": "3. Saving a non-existent job fails cleanly (404)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status 404', () => pm.response.to.have.status(404));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Authorization", "value": "Bearer {{seekerToken}}" }],
+        "url": "{{baseUrl}}/jobs/{{fakeJobId}}/save"
+      }
+    },
+    {
+      "name": "4. Only SEEKER can save (employer gets 403)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status 403', () => pm.response.to.have.status(403));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Authorization", "value": "Bearer {{employerToken}}" }],
+        "url": "{{baseUrl}}/jobs/{{jobId}}/save"
+      }
+    },
+    {
+      "name": "5. Unauthenticated save is rejected (401)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status 401', () => pm.response.to.have.status(401));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/jobs/{{jobId}}/save"
+      }
+    },
+    {
+      "name": "6. Seeker lists their saved jobs",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "pm.test('contains exactly 1 saved job', () => {",
+              "  const body = pm.response.json();",
+              "  pm.expect(body.data.savedJobs.length).to.eql(1);",
+              "  pm.expect(body.data.savedJobs[0].jobId._id).to.eql(pm.collectionVariables.get('jobId'));",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{seekerToken}}" }],
+        "url": "{{baseUrl}}/saved-jobs"
+      }
+    },
+    {
+      "name": "7. Other seeker's saved-jobs list is empty (isolation)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "pm.test('empty list for a seeker who has not saved anything', () => {",
+              "  const body = pm.response.json();",
+              "  pm.expect(body.data.savedJobs.length).to.eql(0);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{otherSeekerToken}}" }],
+        "url": "{{baseUrl}}/saved-jobs"
+      }
+    },
+    {
+      "name": "8. Seeker unsaves the job",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [{ "key": "Authorization", "value": "Bearer {{seekerToken}}" }],
+        "url": "{{baseUrl}}/jobs/{{jobId}}/save"
+      }
+    },
+    {
+      "name": "9. Unsaving again fails cleanly (404 - not saved)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status 404', () => pm.response.to.have.status(404));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [{ "key": "Authorization", "value": "Bearer {{seekerToken}}" }],
+        "url": "{{baseUrl}}/jobs/{{jobId}}/save"
+      }
+    },
+    {
+      "name": "10. Saved jobs list is empty after unsave",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "pm.test('list is now empty', () => {",
+              "  const body = pm.response.json();",
+              "  pm.expect(body.data.savedJobs.length).to.eql(0);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{seekerToken}}" }],
+        "url": "{{baseUrl}}/saved-jobs"
+      }
+    }
+  ]
+}
