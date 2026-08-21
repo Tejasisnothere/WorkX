@@ -1,0 +1,40 @@
+# Local development / integration stack. Not used in production — on
+# EC2/ECS the app container connects to a managed or self-hosted MongoDB
+# via MONGODB_URI instead of the bundled `mongo` service below.
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: workx-backend
+    restart: unless-stopped
+    ports:
+      - "${PORT:-5000}:5000"
+    environment:
+      PORT: 5000
+      NODE_ENV: ${NODE_ENV:-development}
+      MONGODB_URI: mongodb://mongo:27017/workx
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in your .env file (see .env.example)}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      CORS_ORIGIN: ${CORS_ORIGIN:-*}
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  mongo:
+    image: mongo:7
+    container_name: workx-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - workx_mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  workx_mongo_data:
