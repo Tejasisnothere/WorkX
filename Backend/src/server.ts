@@ -7,7 +7,7 @@ import http from "http";
 import { createApp } from "./app";
 import { connectDB, disconnectDB } from "./config/db";
 
-const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 5000;
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 5050;
 
 let server: http.Server | undefined;
 let shuttingDown = false;
@@ -17,11 +17,20 @@ async function start(): Promise<void> {
     await connectDB();
 
     const app = createApp();
-
-    server = app.listen(PORT, () => {
-      console.log(`[server] WorkX backend running on port ${PORT} (${process.env.NODE_ENV || "development"})`);
+    server = await new Promise<http.Server>((resolve, reject) => {
+      const httpServer = app.listen(PORT, () => resolve(httpServer));
+      httpServer.once("error", reject);
     });
+
+    console.log(`[server] WorkX backend running on port ${PORT} (${process.env.NODE_ENV || "development"})`);
   } catch (err) {
+    await disconnectDB();
+
+    if (err instanceof Error && "code" in err && err.code === "EADDRINUSE") {
+      console.error(`[server] Port ${PORT} is already in use. Stop the existing WorkX server or choose another PORT.`);
+      process.exit(1);
+    }
+
     console.error("[server] Failed to start server:", err);
     process.exit(1);
   }

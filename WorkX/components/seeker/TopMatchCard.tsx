@@ -16,11 +16,11 @@ import {
 } from "@/theme";
 
 type TopMatchCardProps = {
-  matchRate: number;
+  matchRate?: number;
   title: string;
   company: string;
   location: string;
-  distance: string;
+  distance?: string;
   salary: string;
   onPress?: () => void;
   onSave?: () => void;
@@ -50,11 +50,13 @@ export default function TopMatchCard({
     >
       <Card style={styles.card}>
         <View style={styles.topRow}>
-          <View style={styles.matchBadge}>
-            <Text style={styles.matchText}>
-              {matchRate}% {t("home.matchRate")}
-            </Text>
-          </View>
+          {matchRate !== undefined ? (
+            <View style={styles.matchBadge}>
+              <Text style={styles.matchText}>
+                {matchRate}% {t("home.matchRate")}
+              </Text>
+            </View>
+          ) : <View />}
 
           <Pressable
             onPress={onSave}
@@ -109,13 +111,12 @@ export default function TopMatchCard({
             </Text>
           </View>
 
-          <Text style={styles.separator}>
-            •
-          </Text>
-
-          <Text style={styles.detailText}>
-            {distance}
-          </Text>
+          {distance ? (
+            <>
+              <Text style={styles.separator}>•</Text>
+              <Text style={styles.detailText}>{distance}</Text>
+            </>
+          ) : null}
         </View>
 
         <View style={styles.footer}>

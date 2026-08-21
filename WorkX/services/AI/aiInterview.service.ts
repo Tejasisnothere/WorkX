@@ -3,7 +3,7 @@ import type {
   InterviewUser,
 } from "./types";
 
-const AI_BASE_URL = "https://configured-floyd-philosophy-shots.trycloudflare.com";
+const AI_BASE_URL = "https://andrews-bag-whole-competing.trycloudflare.com";
 
 export async function startInterview(
   user: InterviewUser,

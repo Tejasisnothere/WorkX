@@ -3,6 +3,8 @@ import {
   TextInput,
   View,
   StyleSheet,
+  type KeyboardTypeOptions,
+  type TextInputProps,
 } from "react-native";
 import {useState} from "react";
 
@@ -15,6 +17,10 @@ type InputProps = {
   onChangeText: (text: string) => void;
   error?: string;
   disabled?: boolean;
+  secureTextEntry?: boolean;
+  keyboardType?: KeyboardTypeOptions;
+  autoCapitalize?: TextInputProps["autoCapitalize"];
+  autoCorrect?: boolean;
 };
 
 export default function Input({
@@ -24,6 +30,10 @@ export default function Input({
   onChangeText,
   error,
   disabled = false,
+  secureTextEntry = false,
+  keyboardType = "default",
+  autoCapitalize = "sentences",
+  autoCorrect = true,
 }: InputProps) {
   const [focused, setFocused] = useState(false);
 
@@ -41,6 +51,10 @@ export default function Input({
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
+        keyboardType={keyboardType}
+        secureTextEntry={secureTextEntry}
+        autoCapitalize={autoCapitalize}
+        autoCorrect={autoCorrect}
         editable={!disabled}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}

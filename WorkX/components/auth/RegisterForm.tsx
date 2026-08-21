@@ -23,30 +23,32 @@ type RegisterFormProps = {
   role: UserRole;
   name: string;
   phone: string;
+  password: string;
 
   onRoleChange: (role: UserRole) => void;
   onNameChange: (name: string) => void;
   onPhoneChange: (phone: string) => void;
+  onPasswordChange: (password: string) => void;
   onSubmit: () => void;
 
   loading?: boolean;
+  error?: string;
 };
 
 export default function RegisterForm({
   role,
   name,
   phone,
+  password,
   onRoleChange,
   onNameChange,
   onPhoneChange,
+  onPasswordChange,
   onSubmit,
   loading = false,
+  error,
 }: RegisterFormProps) {
   const {t} = useTranslation();
-
-  const isValid =
-    name.trim().length > 0 &&
-    phone.trim().length > 0;
 
   return (
     <View style={styles.container}>
@@ -109,17 +111,32 @@ export default function RegisterForm({
         />
       </View>
 
+      <View style={styles.field}>
+        <Text style={styles.label}>
+          {t("auth.password")}
+        </Text>
+
+        <Input
+          placeholder={t("auth.passwordPlaceholder")}
+          value={password}
+          onChangeText={onPasswordChange}
+          secureTextEntry
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+      </View>
+
       <Button
         title={t("auth.register")}
         onPress={onSubmit}
-        state={
-          loading
-            ? "loading"
-            : isValid
-              ? "default"
-              : "disabled"
-        }
+        state={loading ? "loading" : "default"}
       />
+
+      <Text style={styles.passwordHint}>
+        Use a phone number with 8–15 digits and a password with at least 8 characters.
+      </Text>
+
+      {error && <Text style={styles.formError}>{error}</Text>}
     </View>
   );
 }
@@ -229,5 +246,19 @@ const styles = StyleSheet.create({
 
   pressed: {
     opacity: 0.75,
+  },
+
+  passwordHint: {
+    ...typography.caption,
+    color: colors.textMuted,
+    marginTop: spacing.sm,
+    textAlign: "center",
+  },
+
+  formError: {
+    ...typography.caption,
+    color: colors.error,
+    marginTop: spacing.sm,
+    textAlign: "center",
   },
 });

@@ -22,10 +22,7 @@ export default function RoleScreen() {
 
   const handleRoleSelect = (role: UserRole) => {
     router.push({
-      pathname:
-        role === "employer"
-          ? "/auth/employer-register"
-          : "/auth/seeker-register",
+      pathname: "/auth/register",
       params: {
         role,
       },

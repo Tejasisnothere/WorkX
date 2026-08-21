@@ -1,9 +1,11 @@
-import { StyleSheet, Text, View } from "react-native";
+import { Alert, StyleSheet, Text, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import RegisterForm, { type UserRole } from "@/components/auth/RegisterForm";
+import AuthModeToggle from "@/components/auth/AuthModeToggle";
+import { registerUser } from "@/services/auth/auth.service";
 
 import { colors, spacing, typography } from "@/theme";
 
@@ -18,22 +20,36 @@ export default function RegisterScreen() {
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [formError, setFormError] = useState<string | undefined>();
 
   const handleSubmit = async () => {
-    if (!name.trim() || !phone.trim()) {
+    if (!name.trim()) {
+      setFormError("Enter your full name.");
       return;
     }
 
+    const normalizedPhone = phone.replace(/\s+/g, "");
+    if (!/^\+?[1-9]\d{7,14}$/.test(normalizedPhone)) {
+      setFormError("Enter a valid phone number with 8 to 15 digits.");
+      return;
+    }
+
+    if (password.length < 8) {
+      setFormError("Your password must contain at least 8 characters.");
+      return;
+    }
+
+    setFormError(undefined);
     setLoading(true);
 
     try {
-      // Temporary:
-      // Later this will call your registration API.
-      console.log({
+      await registerUser({
         name,
-        phone,
-        role,
+        phoneNumber: normalizedPhone,
+        password,
+        role: role === "seeker" ? "SEEKER" : "EMPLOYER",
       });
 
       if (role === "seeker") {
@@ -41,6 +57,11 @@ export default function RegisterScreen() {
       } else {
         router.push("/employer/location");
       }
+    } catch (error) {
+      Alert.alert(
+        "Registration failed",
+        error instanceof Error ? error.message : "Please try again.",
+      );
     } finally {
       setLoading(false);
     }
@@ -50,15 +71,22 @@ export default function RegisterScreen() {
     <View style={styles.container}>
       <Text style={styles.title}>{t("auth.createAccount")}</Text>
 
+      <AuthModeToggle mode="register" onChange={(mode) => {
+        if (mode === "login") router.replace("/auth/login");
+      }} />
+
       <RegisterForm
         role={role}
         name={name}
         phone={phone}
+        password={password}
         onRoleChange={setRole}
         onNameChange={setName}
         onPhoneChange={setPhone}
+        onPasswordChange={setPassword}
         onSubmit={handleSubmit}
         loading={loading}
+        error={formError}
       />
     </View>
   );
