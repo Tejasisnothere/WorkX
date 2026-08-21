@@ -71,6 +71,20 @@ export default function SeekerLayout() {
           href: null,
         }}
       />
+
+      <Tabs.Screen
+        name="location"
+        options={{
+          href: null,
+        }}
+      />
+
+      <Tabs.Screen
+        name="profession"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }

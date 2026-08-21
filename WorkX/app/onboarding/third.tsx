@@ -14,7 +14,7 @@ export default function OnboardingThree() {
       totalSteps={3}
       buttonLabel={t("onboarding.getStarted")}
       onContinue={() => {
-        router.replace("/role");
+        router.replace("/auth/register");
       }}
     />
   );

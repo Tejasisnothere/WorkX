@@ -87,6 +87,91 @@ const en = {
     skip: "Skip",
     getStarted: "Get Started",
   },
+
+  auth: {
+    createAccount: "Create Account",
+    phoneInfo:
+      "No email needed. Your phone number is your secure digital ID, offline and online.",
+    iWantTo: "I WANT TO...",
+    fullName: "YOUR FULL NAME",
+    fullNamePlaceholder: "Enter your full name",
+    phoneNumber: "PHONE NUMBER",
+    phonePlaceholder: "+91 98765 43210",
+    register: "Register",
+  },
+
+  role: {
+    title: "What brings you here?",
+    description: "Choose how you'd like to use the app.",
+
+    seeker: {
+      title: "Find Work",
+      description: "Discover jobs that match your skills.",
+    },
+
+    employer: {
+      title: "Hire People",
+      description: "Find skilled people for your work.",
+    },
+  },
+
+  location: {
+    title: "Find opportunities near you",
+    description:
+      "Allow location access so we can recommend relevant work around you.",
+    privacy:
+      "Your location is used to improve job recommendations and distance estimates.",
+    allow: "Allow Location",
+    notNow: "Not Now",
+    permissionDenied:
+      "Location permission was denied. You can enable it later from your device settings.",
+    unavailable:
+      "We couldn't determine your location. Please try again.",
+  },
+
+  professions: {
+    title: "What do you do?",
+    description: "Choose your primary profession.",
+    continue: "Continue",
+
+    tailor: "Tailor",
+    farmer: "Farmer",
+    construction_worker: "Construction Worker",
+    cook: "Cook",
+    driver: "Driver",
+    electrician: "Electrician",
+    plumber: "Plumber",
+    healthcare_worker: "Healthcare Worker",
+    carpenter: "Carpenter",
+    welder: "Welder",
+    mechanic: "Mechanic",
+    delivery_worker: "Delivery Worker",
+    security_guard: "Security Guard",
+    housekeeper: "Housekeeper",
+    beauty_worker: "Beauty & Salon Worker",
+    mason: "Mason",
+    painter: "Painter",
+    retail_worker: "Retail Worker",
+    factory_worker: "Factory Worker",
+    gardener: "Gardener",
+  },
+
+  interview: {
+    profileSetup: "Build Your Work Profile",
+    step: "Step {{current}} of {{total}}",
+    starting: "Starting your profile interview...",
+    tapToSpeak: "Tap to answer",
+    stopRecording: "Stop recording",
+    orType: "or type your answer",
+    answerPlaceholder: "Type your answer...",
+    submit: "Submit",
+    submitting: "Sending your answer...",
+    errorTitle: "Unable to continue",
+    error: "Something went wrong. Please try again.",
+    completedTitle: "Profile completed",
+    completedDescription:
+      "We've finished building your work profile.",
+  },
 };
 
 export default en;

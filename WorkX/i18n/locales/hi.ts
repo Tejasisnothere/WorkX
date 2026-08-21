@@ -89,6 +89,91 @@ const hi = {
     skip: "छोड़ें",
     getStarted: "शुरू करें",
   },
+
+  auth: {
+    createAccount: "खाता बनाएं",
+    phoneInfo:
+      "ईमेल की आवश्यकता नहीं है। आपका फ़ोन नंबर आपका सुरक्षित डिजिटल आईडी है, ऑनलाइन और ऑफलाइन दोनों में।",
+    iWantTo: "मैं क्या करना चाहता हूँ...",
+    fullName: "पूरा नाम",
+    fullNamePlaceholder: "अपना पूरा नाम दर्ज करें",
+    phoneNumber: "फ़ोन नंबर",
+    phonePlaceholder: "+91 98765 43210",
+    register: "पंजीकरण करें",
+  },
+
+  role: {
+    title: "आप यहाँ क्यों आए हैं?",
+    description: "चुनें कि आप ऐप का उपयोग कैसे करना चाहते हैं।",
+
+    seeker: {
+      title: "काम खोजें",
+      description: "अपने कौशल से मेल खाने वाली नौकरियाँ खोजें।",
+    },
+
+    employer: {
+      title: "कर्मचारी खोजें",
+      description: "अपने काम के लिए कुशल लोगों को खोजें।",
+    },
+  },
+
+  location: {
+    title: "अपने आस-पास अवसर खोजें",
+    description:
+      "अपने आसपास के काम की सिफारिशें पाने के लिए स्थान की अनुमति दें।",
+    privacy:
+      "आपके स्थान का उपयोग नौकरी की सिफारिशों और दूरी का अनुमान बेहतर बनाने के लिए किया जाता है।",
+    allow: "स्थान की अनुमति दें",
+    notNow: "अभी नहीं",
+    permissionDenied:
+      "स्थान की अनुमति नहीं दी गई। आप इसे बाद में डिवाइस सेटिंग्स से सक्षम कर सकते हैं।",
+    unavailable:
+      "हम आपका स्थान निर्धारित नहीं कर सके। कृपया पुनः प्रयास करें।",
+  },
+
+  professions: {
+    title: "आप क्या काम करते हैं?",
+    description: "अपना मुख्य व्यवसाय चुनें।",
+    continue: "जारी रखें",
+
+    tailor: "दर्जी",
+    farmer: "किसान",
+    construction_worker: "निर्माण श्रमिक",
+    cook: "रसोइया",
+    driver: "ड्राइवर",
+    electrician: "इलेक्ट्रीशियन",
+    plumber: "प्लंबर",
+    healthcare_worker: "स्वास्थ्यकर्मी",
+    carpenter: "बढ़ई",
+    welder: "वेल्डर",
+    mechanic: "मैकेनिक",
+    delivery_worker: "डिलीवरी कर्मचारी",
+    security_guard: "सुरक्षा गार्ड",
+    housekeeper: "हाउसकीपर",
+    beauty_worker: "ब्यूटी और सैलून कर्मचारी",
+    mason: "राजमिस्त्री",
+    painter: "पेंटर",
+    retail_worker: "रिटेल कर्मचारी",
+    factory_worker: "फैक्ट्री कर्मचारी",
+    gardener: "माली",
+  },
+
+  interview: {
+    profileSetup: "अपनी कार्य प्रोफ़ाइल बनाएं",
+    step: "चरण {{current}} / {{total}}",
+    starting: "आपकी प्रोफ़ाइल इंटरव्यू शुरू हो रही है...",
+    tapToSpeak: "जवाब देने के लिए बोलें",
+    stopRecording: "रिकॉर्डिंग रोकें",
+    orType: "या अपना जवाब लिखें",
+    answerPlaceholder: "अपना जवाब लिखें...",
+    submit: "जमा करें",
+    submitting: "आपका जवाब भेजा जा रहा है...",
+    errorTitle: "आगे नहीं बढ़ सके",
+    error: "कुछ गलत हो गया। कृपया पुनः प्रयास करें।",
+    completedTitle: "प्रोफ़ाइल पूरी हो गई",
+    completedDescription:
+      "आपकी कार्य प्रोफ़ाइल तैयार हो गई है।",
+  },
 };
 
 export default hi;

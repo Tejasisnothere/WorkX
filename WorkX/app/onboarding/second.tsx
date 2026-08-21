@@ -18,7 +18,7 @@ export default function OnboardingTwo() {
         router.push("/onboarding/third");
       }}
       onSkip={() => {
-        router.replace("/role");
+        router.replace("/auth/register");
       }}
     />
   );
