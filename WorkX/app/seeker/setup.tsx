@@ -38,13 +38,13 @@ import {
  * Saved user/session state
  */
 const interviewUser = {
-  phone: "3454245565",
+  phone: "3454245569",
   name: "Tanishq",
   age: 35,
   lat: 55.5,
   long: 34,
-  language: "hindi",
-  profession: "gardener",
+  language: "english",
+  profession: "software engineer",
 };
 
 export default function SeekerSetupScreen() {

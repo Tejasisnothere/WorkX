@@ -10,7 +10,7 @@ import type {
   InterviewUser,
 } from "@/services/AI/types";
 
-const TOTAL_QUESTIONS = 7;
+const TOTAL_QUESTIONS = 3;
 
 export function useAIInterview(
   user: InterviewUser,
@@ -80,6 +80,11 @@ export function useAIInterview(
         );
 
       if (result.completed) {
+        setStatus("completed");
+        return;
+      }
+
+      if(questionNumber >= TOTAL_QUESTIONS) {
         setStatus("completed");
         return;
       }
